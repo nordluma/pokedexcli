@@ -1,9 +1,16 @@
 package main
 
-import "fmt"
+import (
+	"fmt"
+	"strings"
+)
 
 func cleanInput(text string) []string {
-	return []string{}
+	lower := strings.ToLower(text)
+	trimmed := strings.TrimSpace(lower)
+	words := strings.Fields(trimmed)
+
+	return words
 }
 
 func main() {
