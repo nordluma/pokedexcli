@@ -23,6 +23,11 @@ func TestCleanInput(t *testing.T) {
 
 	for _, c := range cases {
 		actual := cleanInput(c.input)
+
+		if len(actual) != len(c.expected) {
+			t.Errorf("actual len: %d != expected len: %d", len(actual), len(c.expected))
+		}
+
 		for i := range actual {
 			word := actual[i]
 			expectedWord := c.expected[i]
