@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
 	"net/http"
 	"os"
 	"strings"
@@ -109,12 +108,8 @@ func getMaps(url string) (AreaResponse, error) {
 		return areaResponse, errors.New("request for areas failed")
 	}
 
-	data, err := io.ReadAll(res.Body)
-	if err != nil {
-		return areaResponse, err
-	}
-
-	if err = json.Unmarshal(data, &areaResponse); err != nil {
+	decoder := json.NewDecoder(res.Body)
+	if err = decoder.Decode(&areaResponse); err != nil {
 		return areaResponse, err
 	}
 
