@@ -159,9 +159,7 @@ func init() {
 	}
 }
 
-func main() {
-	config := &config{cache: internal.NewCache(2 * time.Minute)}
-
+func repl(config *config) {
 	scanner := bufio.NewScanner(os.Stdin)
 	for {
 		fmt.Print("pokedex > ")
@@ -179,4 +177,10 @@ func main() {
 			fmt.Println(err)
 		}
 	}
+}
+
+func main() {
+	config := &config{cache: internal.NewCache(2 * time.Minute)}
+
+	repl(config)
 }
