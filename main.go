@@ -8,6 +8,9 @@ import (
 	"net/http"
 	"os"
 	"strings"
+	"time"
+
+	"github.com/nordluma/pokedexcli/internal"
 )
 
 func cleanInput(text string) []string {
@@ -19,6 +22,7 @@ func cleanInput(text string) []string {
 }
 
 type config struct {
+	cache    *internal.Cache
 	next     string
 	previous string
 }
@@ -67,7 +71,7 @@ func mapCommand(config *config) error {
 		url = config.next
 	}
 
-	areaResponse, err := getMaps(url)
+	areaResponse, err := getMaps(url, config.cache)
 	if err != nil {
 		return err
 	}
@@ -84,7 +88,7 @@ func mapbCommand(config *config) error {
 		return nil
 	}
 
-	areaResponse, err := getMaps(config.previous)
+	areaResponse, err := getMaps(config.previous, config.cache)
 	if err != nil {
 		return err
 	}
@@ -95,8 +99,18 @@ func mapbCommand(config *config) error {
 	return nil
 }
 
-func getMaps(url string) (AreaResponse, error) {
+func getMaps(url string, cache *internal.Cache) (AreaResponse, error) {
 	var areaResponse AreaResponse
+
+	// check cache
+	entry, found := cache.Get(url)
+	if found {
+		if err := json.Unmarshal(entry, &areaResponse); err != nil {
+			return areaResponse, err
+		}
+
+		return areaResponse, nil
+	}
 
 	res, err := http.Get(url)
 	if err != nil {
@@ -146,7 +160,7 @@ func init() {
 }
 
 func main() {
-	config := &config{}
+	config := &config{cache: internal.NewCache(2 * time.Minute)}
 
 	scanner := bufio.NewScanner(os.Stdin)
 	for {
