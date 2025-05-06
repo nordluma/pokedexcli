@@ -2,7 +2,11 @@ package main
 
 import (
 	"bufio"
+	"encoding/json"
+	"errors"
 	"fmt"
+	"io"
+	"net/http"
 	"os"
 	"strings"
 )
@@ -15,20 +19,27 @@ func cleanInput(text string) []string {
 	return words
 }
 
+type config struct {
+	next     string
+	previous string
+}
+
+var commands map[string]clicommand
+
 type clicommand struct {
 	name        string
 	description string
-	callback    func() error
+	callback    func(*config) error
 }
 
-func commandExit() error {
+func commandExit(config *config) error {
 	fmt.Println("Closing the Pokedex... Goodbye!")
 	os.Exit(0)
 
 	return nil
 }
 
-func printUsage() error {
+func printUsage(config *config) error {
 	fmt.Println("Welcome to the Pokedex!")
 	fmt.Print("Usage:\n\n")
 
@@ -39,7 +50,80 @@ func printUsage() error {
 	return nil
 }
 
-var commands map[string]clicommand
+type AreaResponse struct {
+	Count    int
+	Next     string
+	Previous string
+	Results  []Area
+}
+
+type Area struct {
+	Name string
+	Url  string
+}
+
+func mapCommand(config *config) error {
+	url := "https://pokeapi.co/api/v2/location-area/"
+	if config.next != "" {
+		url = config.next
+	}
+
+	areaResponse, err := getMaps(url)
+	if err != nil {
+		return err
+	}
+
+	config.next = areaResponse.Next
+	config.previous = areaResponse.Previous
+
+	return nil
+}
+
+func mapbCommand(config *config) error {
+	if config.previous == "" {
+		fmt.Println("you're on the first page")
+		return nil
+	}
+
+	areaResponse, err := getMaps(config.previous)
+	if err != nil {
+		return err
+	}
+
+	config.next = areaResponse.Next
+	config.previous = areaResponse.Previous
+
+	return nil
+}
+
+func getMaps(url string) (AreaResponse, error) {
+	var areaResponse AreaResponse
+
+	res, err := http.Get(url)
+	if err != nil {
+		return areaResponse, err
+	}
+
+	defer res.Body.Close()
+	if res.StatusCode != http.StatusOK {
+		return areaResponse, errors.New("request for areas failed")
+	}
+
+	data, err := io.ReadAll(res.Body)
+	if err != nil {
+		return areaResponse, err
+	}
+
+	if err = json.Unmarshal(data, &areaResponse); err != nil {
+		return areaResponse, err
+	}
+
+	for _, area := range areaResponse.Results {
+		fmt.Println(area.Name)
+	}
+
+	return areaResponse, nil
+}
 
 func init() {
 	commands = map[string]clicommand{
@@ -53,10 +137,22 @@ func init() {
 			description: "Displays a help message",
 			callback:    printUsage,
 		},
+		"map": {
+			name:        "map",
+			description: "Get the next 20 maps",
+			callback:    mapCommand,
+		},
+		"mapb": {
+			name:        "mapb",
+			description: "Get the previous 20 maps",
+			callback:    mapbCommand,
+		},
 	}
 }
 
 func main() {
+	config := &config{}
+
 	scanner := bufio.NewScanner(os.Stdin)
 	for {
 		fmt.Print("pokedex > ")
@@ -70,7 +166,7 @@ func main() {
 			continue
 		}
 
-		if err := cmd.callback(); err != nil {
+		if err := cmd.callback(config); err != nil {
 			fmt.Println(err)
 		}
 	}
