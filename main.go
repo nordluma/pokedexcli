@@ -3,8 +3,8 @@ package main
 import (
 	"bufio"
 	"encoding/json"
-	"errors"
 	"fmt"
+	"io"
 	"net/http"
 	"os"
 	"strings"
@@ -53,7 +53,7 @@ func printUsage(config *config) error {
 	return nil
 }
 
-type AreaResponse struct {
+type LocationAreaResponse struct {
 	Count    int
 	Next     string
 	Previous string
@@ -71,10 +71,17 @@ func mapCommand(config *config) error {
 		url = config.next
 	}
 
-	areaResponse, err := getMaps(url, config.cache)
+	var areaResponse LocationAreaResponse
+	data, err := get(url, config.cache)
 	if err != nil {
 		return err
 	}
+
+	if err = json.Unmarshal(data, &areaResponse); err != nil {
+		return err
+	}
+
+	printAreas(areaResponse.Results)
 
 	config.next = areaResponse.Next
 	config.previous = areaResponse.Previous
@@ -88,10 +95,17 @@ func mapbCommand(config *config) error {
 		return nil
 	}
 
-	areaResponse, err := getMaps(config.previous, config.cache)
+	var areaResponse LocationAreaResponse
+	data, err := get(config.previous, config.cache)
 	if err != nil {
 		return err
 	}
+
+	if err = json.Unmarshal(data, &areaResponse); err != nil {
+		return err
+	}
+
+	printAreas(areaResponse.Results)
 
 	config.next = areaResponse.Next
 	config.previous = areaResponse.Previous
@@ -99,39 +113,43 @@ func mapbCommand(config *config) error {
 	return nil
 }
 
-func getMaps(url string, cache *internal.Cache) (AreaResponse, error) {
-	var areaResponse AreaResponse
+func printAreas(areas []Area) {
+	for _, area := range areas {
+		fmt.Println(area.Name)
+	}
+}
+
+func get(url string, cache *internal.Cache) ([]byte, error) {
+	var areaResponse LocationAreaResponse
 
 	// check cache
 	entry, found := cache.Get(url)
 	if found {
 		if err := json.Unmarshal(entry, &areaResponse); err != nil {
-			return areaResponse, err
+			return nil, err
 		}
 
-		return areaResponse, nil
+		return entry, nil
 	}
 
 	res, err := http.Get(url)
 	if err != nil {
-		return areaResponse, err
+		return nil, err
 	}
 
-	defer res.Body.Close()
 	if res.StatusCode != http.StatusOK {
-		return areaResponse, errors.New("request for areas failed")
+		return nil, fmt.Errorf("non ok response: %d", res.StatusCode)
+	}
+	defer res.Body.Close()
+
+	data, err := io.ReadAll(res.Body)
+	if err != nil {
+		return nil, err
 	}
 
-	decoder := json.NewDecoder(res.Body)
-	if err = decoder.Decode(&areaResponse); err != nil {
-		return areaResponse, err
-	}
+	cache.Add(url, data)
 
-	for _, area := range areaResponse.Results {
-		fmt.Println(area.Name)
-	}
-
-	return areaResponse, nil
+	return data, nil
 }
 
 func init() {
