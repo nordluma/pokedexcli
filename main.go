@@ -25,6 +25,7 @@ type config struct {
 	cache    *internal.Cache
 	next     string
 	previous string
+	item     string
 }
 
 var commands map[string]clicommand
@@ -119,6 +120,48 @@ func printAreas(areas []Area) {
 	}
 }
 
+type ExploreResponse struct {
+	PokemonEncounters []PokemonEncounter `json:"pokemon_encounters"`
+}
+
+type NamedAPIResource struct {
+	Name string `json:"name"`
+	URL  string `json:"url"`
+}
+
+type PokemonEncounter struct {
+	Pokemon NamedAPIResource `json:"pokemon"`
+}
+
+func exploreCommand(config *config) error {
+	if config.item == "" {
+		return fmt.Errorf("no location given")
+	}
+
+	url := "https://pokeapi.co/api/v2/location-area/" + config.item
+
+	var exploreRes ExploreResponse
+	data, err := get(url, config.cache)
+	if err != nil {
+		return err
+	}
+
+	if err = json.Unmarshal(data, &exploreRes); err != nil {
+		return err
+	}
+
+	printPokemonsInArea(exploreRes.PokemonEncounters)
+
+	return nil
+}
+
+func printPokemonsInArea(encounters []PokemonEncounter) {
+	fmt.Println("Found Pokemon:")
+	for _, pokemon := range encounters {
+		fmt.Printf(" - %s\n", pokemon.Pokemon.Name)
+	}
+}
+
 func get(url string, cache *internal.Cache) ([]byte, error) {
 	var areaResponse LocationAreaResponse
 
@@ -166,13 +209,18 @@ func init() {
 		},
 		"map": {
 			name:        "map",
-			description: "Get the next 20 maps",
+			description: "Get the next 20 areas",
 			callback:    mapCommand,
 		},
 		"mapb": {
 			name:        "mapb",
-			description: "Get the previous 20 maps",
+			description: "Get the previous 20 areas",
 			callback:    mapbCommand,
+		},
+		"explore": {
+			name:        "explore <location_name>",
+			description: "Explore a location",
+			callback:    exploreCommand,
 		},
 	}
 }
@@ -183,8 +231,13 @@ func repl(config *config) {
 		fmt.Print("pokedex > ")
 		scanner.Scan()
 		input := scanner.Text()
+
 		args := cleanInput(input)
 		cmdInput := args[0]
+		if len(args) > 1 {
+			config.item = args[1]
+		}
+
 		cmd, ok := commands[cmdInput]
 		if !ok {
 			fmt.Println("Unknown command")
