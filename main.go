@@ -11,6 +11,7 @@ type config struct {
 	next     string
 	previous string
 	item     string
+	pokedex  map[string]pokeapi.PokemonResponse
 }
 
 func main() {

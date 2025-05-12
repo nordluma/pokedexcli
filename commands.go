@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"math/rand"
 	"os"
 
 	"github.com/nordluma/pokedexcli/internal/pokeapi"
@@ -40,6 +41,11 @@ func getCommands() map[string]clicommand {
 			name:        "explore <location_name>",
 			description: "Explore a location",
 			callback:    exploreCommand,
+		},
+		"catch": {
+			name:        "catch <pokemon>",
+			description: "Catch a pokemon",
+			callback:    catchCommand,
 		},
 	}
 
@@ -137,6 +143,39 @@ func printPokemonsInArea(encounters []pokeapi.PokemonEncounter) {
 	for _, pokemon := range encounters {
 		fmt.Printf(" - %s\n", pokemon.Pokemon.Name)
 	}
+}
+
+func catchCommand(config *config) error {
+	fmt.Printf("Throwing a Pokeball at %s...\n", config.item)
+
+	url := "https://pokeapi.co/api/v2/pokemon/" + config.item
+
+	var pokemonResponse pokeapi.PokemonResponse
+	data, err := config.client.Get(url)
+	if err != nil {
+		return err
+	}
+
+	if err = json.Unmarshal(data, &pokemonResponse); err != nil {
+		return err
+	}
+
+	pokemonCaught := tryCatching(pokemonResponse.BaseExperience)
+	if pokemonCaught {
+		fmt.Printf("%s was caught!\n", config.item)
+		config.pokedex[config.item] = pokemonResponse
+	} else {
+		fmt.Printf("%s escaped!\n", config.item)
+	}
+
+	return nil
+}
+
+func tryCatching(baseStat int) bool {
+	roll := rand.Intn(100) + 1
+	threshold := 100 - baseStat
+
+	return roll <= threshold
 }
 
 func commandExit(config *config) error {
