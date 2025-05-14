@@ -47,6 +47,11 @@ func getCommands() map[string]clicommand {
 			description: "Catch a pokemon",
 			callback:    catchCommand,
 		},
+		"inspect": {
+			name:        "inspect <pokemon>",
+			description: "Inspect a pokemon in pokedex",
+			callback:    inspectCommand,
+		},
 	}
 
 }
@@ -176,6 +181,10 @@ func tryCatching(baseStat int) bool {
 	threshold := 100 - baseStat
 
 	return roll <= threshold
+}
+
+func inspectCommand(config *config) error {
+	return nil
 }
 
 func commandExit(config *config) error {
