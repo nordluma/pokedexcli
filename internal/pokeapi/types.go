@@ -50,6 +50,16 @@ type PokemonResponse struct {
 	PastAbilities []PokemonPastAbility `json:"past_abilities"`
 }
 
+func (p PokemonResponse) FindFromStats(stat string) (int, bool) {
+	for _, s := range p.Stats {
+		if s.Stat.Name == stat {
+			return s.BaseStat, true
+		}
+	}
+
+	return 0, false
+}
+
 type PokemonAbility struct {
 	IsHidden bool             `json:"is_hidden"`
 	Slot     int              `json:"slot"`
