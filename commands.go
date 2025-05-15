@@ -198,19 +198,8 @@ func printPokemon(pokemon pokeapi.PokemonResponse) {
 	fmt.Printf("Height: %d\n", pokemon.Height)
 	fmt.Printf("Weight: %d\n", pokemon.Weight)
 	fmt.Println("Stats:")
-	wantedStats := []string{
-		"hp",
-		"attack",
-		"defense",
-		"special-attack",
-		"special-defense",
-		"speed",
-	}
-	for _, stat := range wantedStats {
-		value, ok := pokemon.FindFromStats(stat)
-		if ok {
-			fmt.Printf("  -%s: %d\n", stat, value)
-		}
+	for _, s := range pokemon.Stats {
+		fmt.Printf("  -%s: %d\n", s.Stat.Name, s.BaseStat)
 	}
 
 	fmt.Println("Types:")
