@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"math/rand"
 	"os"
@@ -53,7 +54,6 @@ func getCommands() map[string]clicommand {
 			callback:    inspectCommand,
 		},
 	}
-
 }
 
 func printUsage(config *config) error {
@@ -184,7 +184,39 @@ func tryCatching(baseStat int) bool {
 }
 
 func inspectCommand(config *config) error {
+	pokemon, ok := config.pokedex[config.item]
+	if !ok {
+		return errors.New("you have not caught that pokemon")
+	}
+	printPokemon(pokemon)
+
 	return nil
+}
+
+func printPokemon(pokemon pokeapi.PokemonResponse) {
+	fmt.Printf("Name: %s\n", pokemon.Name)
+	fmt.Printf("Height: %d\n", pokemon.Height)
+	fmt.Printf("Weight: %d\n", pokemon.Weight)
+	fmt.Println("Stats:")
+	wantedStats := []string{
+		"hp",
+		"attack",
+		"defense",
+		"special-attack",
+		"special-defense",
+		"speed",
+	}
+	for _, stat := range wantedStats {
+		value, ok := pokemon.FindFromStats(stat)
+		if ok {
+			fmt.Printf("  -%s: %d\n", stat, value)
+		}
+	}
+
+	fmt.Println("Types:")
+	for _, kind := range pokemon.Types {
+		fmt.Printf("  - %s\n", kind.Type.Name)
+	}
 }
 
 func commandExit(config *config) error {
