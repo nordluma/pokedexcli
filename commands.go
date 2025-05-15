@@ -53,6 +53,11 @@ func getCommands() map[string]clicommand {
 			description: "Inspect a pokemon in pokedex",
 			callback:    inspectCommand,
 		},
+		"pokedex": {
+			name:        "pokedex",
+			description: "Print all pokemons in pokedex",
+			callback:    printPokemonsInPokedexCommand,
+		},
 	}
 }
 
@@ -169,6 +174,7 @@ func catchCommand(config *config) error {
 	if pokemonCaught {
 		fmt.Printf("%s was caught!\n", config.item)
 		config.pokedex[config.item] = pokemonResponse
+		fmt.Println("you may now inspect in with the inspect command.")
 	} else {
 		fmt.Printf("%s escaped!\n", config.item)
 	}
@@ -206,6 +212,19 @@ func printPokemon(pokemon pokeapi.PokemonResponse) {
 	for _, kind := range pokemon.Types {
 		fmt.Printf("  - %s\n", kind.Type.Name)
 	}
+}
+
+func printPokemonsInPokedexCommand(config *config) error {
+	if len(config.pokedex) == 0 {
+		return errors.New("No Pokemons caught")
+	}
+
+	fmt.Println("Your Pokedex:")
+	for _, pokemon := range config.pokedex {
+		fmt.Printf("  - %s\n", pokemon.Name)
+	}
+
+	return nil
 }
 
 func commandExit(config *config) error {
