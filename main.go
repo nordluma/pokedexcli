@@ -17,7 +17,8 @@ type config struct {
 func main() {
 	client := pokeapi.NewClient(5*time.Second, 5*time.Minute)
 	cfg := config{
-		client: client,
+		client:  client,
+		pokedex: map[string]pokeapi.PokemonResponse{},
 	}
 
 	repl(&cfg)
